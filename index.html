@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KOC NFC Asset Support Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; background: #f4f4f4; }
+        header { background: #003366; color: white; padding: 15px 20px; }
+        header h1 { margin: 0; font-size: 20px; }
+        header span { font-size: 12px; opacity: 0.8; }
+        .container { padding: 20px; max-width: 1000px; margin: 0 auto; }
+        .card { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h2, h3, h4 { margin-top: 0; color: #003366; }
+        label { font-weight: bold; display: block; margin-top: 10px; }
+        input, select, textarea { width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { padding: 10px 15px; background: #0078D4; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #005a9e; }
+        .map-box { width: 100%; height: 180px; background: #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-top: 10px; }
+        .hidden { display: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 8px; font-size: 13px; }
+        th { background: #e6eef7; }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; color: white; }
+        .badge-tier1 { background: #0078D4; }
+        .badge-tier2 { background: #107C10; }
+        .badge-tier3 { background: #D83B01; }
+        .small { font-size: 12px; color: #555; }
+        .warning { color: #b00020; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Kuwait Oil Company – NFC Asset Support Demo</h1>
+    <span>Internal Concept Prototype – IT Assets (Indoor & Outdoor)</span>
+</header>
+
+<div class="container">
+
+    <!-- INFO ABOUT URL PARAM -->
+    <div class="card" id="idInfoCard">
+        <h2>Device Identification (Simulated NFC Tap)</h2>
+        <p class="small">
+            This demo expects a URL parameter <strong>?id=ASSET-ID</strong>.<br>
+            Example NFC URLs:<br>
+            <code>?id=KOC-IT-NSW-0021</code>,
+            <code>?id=KOC-WIFI-LOBBY-01</code>,
+            <code>?id=KOC-CCTV-GATE3-07</code>,
+            <code>?id=KOC-PRN-HR-04</code>,
+            <code>?id=KOC-RTR-WP12-01</code>.
+        </p>
+        <p id="idStatus" class="warning"></p>
+    </div>
+
+    <!-- LOGIN CARD -->
+    <div class="card" id="loginCard">
+        <h2>Login (Demo Accounts)</h2>
+        <p class="small">
+            Use one of the sample accounts:<br>
+            <strong>Tier‑1 (End User):</strong> user1 / user123<br>
+            <strong>Tier‑2 (Service Engineer):</strong> admin1 / admin123<br>
+            <strong>Tier‑3 (Super Admin):</strong> superadmin / super123
+        </p>
+        <label>Username</label>
+        <input type="text" id="username" placeholder="Enter username">
+
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Enter password">
+
+        <button onclick="login()">Login</button>
+        <p id="loginError" class="small" style="color:red; margin-top:10px;"></p>
+    </div>
+
+    <!-- COMMON ASSET CARD -->
+    <div class="card hidden" id="assetCard">
+        <h2>Asset Information</h2>
+        <p><strong>Asset ID:</strong> <span id="assetId"></span></p>
+        <p><strong>Device Name:</strong> <span id="deviceName"></span></p>
+        <p><strong>Model:</strong> <span id="deviceModel"></span></p>
+        <p><strong>Registered Location:</strong> <span id="deviceLocation"></span></p>
+        <p id="roleBadge"></p>
+    </div>
+
+    <!-- TIER 1: END USER -->
+    <div class="card hidden" id="tier1Card">
+        <h3>Tier‑1 – End User Issue Reporting</h3>
+
+        <label>Select Issue Type:</label>
+        <select id="issueType">
+            <option>No Power</option>
+            <option>Network Down</option>
+            <option>Port Not Working</option>
+            <option>Physical Damage</option>
+            <option>Other</option>
+        </select>
+
+        <label>Additional Comments:</label>
+        <textarea id="issueComments" placeholder="Describe the issue from user perspective..."></textarea>
+
+        <label>Attach Photo (Demo only):</label>
+        <input type="file" accept="image/*">
+
+        <button onclick="captureLocation()">Attach Current Location</button>
+        <div id="locationBox" style="margin-top:10px;"></div>
+
+        <button style="margin-top:20px; width:100%;" onclick="submitIssue()">Submit Report (Demo)</button>
+        <p id="submitMessage" class="small" style="color:green;"></p>
+    </div>
+
+    <!-- TIER 2: SERVICE ENGINEER -->
+    <div class="card hidden" id="tier2Card">
+        <h3>Tier‑2 – Service Engineer View</h3>
+
+        <h4>Technical Details</h4>
+        <p><strong>IP Address:</strong> <span id="techIp"></span></p>
+        <p><strong>Serial Number:</strong> <span id="techSerial"></span></p>
+        <p><strong>Installation Date:</strong> <span id="techInstallDate"></span></p>
+
+        <h4>Last Reported Issue</h4>
+        <p><strong>Issue Type:</strong> <span id="lastIssueType">–</span></p>
+        <p><strong>User Comments:</strong> <span id="lastIssueComments">–</span></p>
+        <p><strong>Reported Location (if captured):</strong></p>
+        <div id="engineerLocationBox" class="small">No location captured yet.</div>
+
+        <h4>Service History</h4>
+        <p class="small">This table is specific to the current device.</p>
+        <table id="serviceTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Engineer</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                    <th>Parts Used</th>
+                </tr>
+            </thead>
+            <tbody id="serviceTableBody">
+            </tbody>
+        </table>
+
+        <h4>Maintenance Actions (Demo)</h4>
+        <label>Status:</label>
+        <select id="ticketStatus">
+            <option>New</option>
+            <option>In Progress</option>
+            <option>On Hold</option>
+            <option>Completed</option>
+        </select>
+
+        <label>Engineer Notes:</label>
+        <textarea id="engineerNotes" placeholder="Enter diagnosis, actions taken, etc."></textarea>
+
+        <label>Parts Used:</label>
+        <input type="text" id="partsUsed" placeholder="e.g., Power supply module, SFP module">
+
+        <button onclick="addServiceHistory()">Save to Service History (Demo)</button>
+        <p id="serviceMessage" class="small" style="color:green;"></p>
+    </div>
+
+    <!-- TIER 3: SUPER ADMIN -->
+    <div class="card hidden" id="tier3Card">
+        <h3>Tier‑3 – Super Admin / IT Administrator</h3>
+
+        <h4>Technical Details</h4>
+        <p><strong>IP Address:</strong> <span id="adminIp"></span></p>
+        <p><strong>Serial Number:</strong> <span id="adminSerial"></span></p>
+        <p><strong>Installation Date:</strong> <span id="adminInstallDate"></span></p>
+
+        <h4>Administrative Details</h4>
+        <p><strong>Procurement Date:</strong> <span id="adminProcurement"></span></p>
+        <p><strong>Warranty Expiry:</strong> <span id="adminWarranty"></span></p>
+        <p><strong>Vendor:</strong> <span id="adminVendor"></span></p>
+        <p><strong>AMC Contract:</strong> <span id="adminAmc"></span></p>
+
+        <h4>Credentials (Demo Only)</h4>
+        <p><strong>Username:</strong> <span id="adminUser"></span></p>
+        <p><strong>Password:</strong> <span id="adminPass"></span></p>
+
+        <h4>Service History (Editable)</h4>
+        <p class="small">Same table as Tier‑2, but visible with full admin context.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Engineer</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                    <th>Parts Used</th>
+                </tr>
+            </thead>
+            <tbody id="serviceTableBodyAdmin">
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+    // DEVICE DATABASE
+    const devices = {
+        "KOC-IT-NSW-0021": {
+            assetId: "KOC-IT-NSW-0021",
+            name: "Network Switch – Floor 2",
+            model: "Cisco C2960X",
+            location: "Admin Building, Floor 2, Room 204",
+            ip: "10.22.14.21",
+            serial: "FOC2219X0AB",
+            installDate: "12-Feb-2023",
+            procurementDate: "05-Jan-2023",
+            warranty: "05-Jan-2026",
+            vendor: "GulfTech Solutions",
+            amc: "AMC-NTW-2023-07",
+            credUser: "admin_koc",
+            credPass: "Koc@123",
+            serviceHistory: [
+                { date: "10-Apr-2026", engineer: "Eng. Salman", status: "Completed", notes: "Firmware upgraded to latest stable version.", parts: "–" },
+                { date: "02-Jan-2026", engineer: "Eng. Ramesh", status: "Completed", notes: "Replaced faulty fan module.", parts: "Fan module" }
+            ]
+        },
+        "KOC-WIFI-LOBBY-01": {
+            assetId: "KOC-WIFI-LOBBY-01",
+            name: "WiFi Access Point – Lobby",
+            model: "Aruba AP515",
+            location: "Main Lobby",
+            ip: "10.22.50.11",
+            serial: "CNAP515LBB01",
+            installDate: "20-Aug-2022",
+            procurementDate: "20-Aug-2022",
+            warranty: "20-Aug-2025",
+            vendor: "Alghanim Networking",
+            amc: "AMC-WIFI-2022-03",
+            credUser: "wifi_admin",
+            credPass: "Wifi@123",
+            serviceHistory: [
+                { date: "15-Mar-2026", engineer: "Eng. Ali", status: "Completed", notes: "Reconfigured SSID and security settings.", parts: "–" }
+            ]
+        },
+        "KOC-CCTV-GATE3-07": {
+            assetId: "KOC-CCTV-GATE3-07",
+            name: "CCTV Camera – Gate 3",
+            model: "Hikvision DS-2CD",
+            location: "Gate 3 Outdoor",
+            ip: "10.30.12.77",
+            serial: "HIKG3CAM07",
+            installDate: "05-May-2021",
+            procurementDate: "05-May-2021",
+            warranty: "05-May-2024",
+            vendor: "Al-Mulla Security",
+            amc: "AMC-CCTV-2021-11",
+            credUser: "cam_admin",
+            credPass: "Cam@123",
+            serviceHistory: [
+                { date: "01-Feb-2026", engineer: "Eng. Joseph", status: "Completed", notes: "Cleaned dome and adjusted focus.", parts: "–" }
+            ]
+        },
+        "KOC-PRN-HR-04": {
+            assetId: "KOC-PRN-HR-04",
+            name: "Printer – HR Department",
+            model: "HP LaserJet MFP",
+            location: "HR Office",
+            ip: "10.40.8.44",
+            serial: "HPLJMFPHR04",
+            installDate: "10-Jan-2024",
+            procurementDate: "10-Jan-2024",
+            warranty: "10-Jan-2027",
+            vendor: "HP Kuwait",
+            amc: "AMC-PRN-2024-02",
+            credUser: "printer_admin",
+            credPass: "Print@123",
+            serviceHistory: [
+                { date: "20-Apr-2026", engineer: "Eng. Nasser", status: "Completed", notes: "Replaced toner and cleaned rollers.", parts: "Toner cartridge" }
+            ]
+        },
+        "KOC-RTR-WP12-01": {
+            assetId: "KOC-RTR-WP12-01",
+            name: "Outdoor Router – Wellpad 12",
+            model: "Huawei AR650",
+            location: "Wellpad 12 Field",
+            ip: "10.55.120.1",
+            serial: "HWAR650WP12",
+            installDate: "15-Mar-2023",
+            procurementDate: "15-Mar-2023",
+            warranty: "15-Mar-2026",
+            vendor: "Huawei Kuwait",
+            amc: "AMC-RTR-2023-09",
+            credUser: "router_admin",
+            credPass: "Route@123",
+            serviceHistory: [
+                { date: "05-May-2026", engineer: "Eng. Faisal", status: "Completed", notes: "Checked link stability and updated routing policy.", parts: "–" }
+            ]
+        }
+    };
+
+    let currentRole = null;
+    let currentDevice = null;
+    let lastLocation = null;
+    let lastIssue = { type: "–", comments: "–" };
+
+    function init() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const id = urlParams.get("id");
+        const idStatus = document.getElementById("idStatus");
+
+        if (!id) {
+            idStatus.textContent = "No asset ID provided in URL. Append ?id=KOC-IT-NSW-0021 (or other) to simulate NFC tap.";
+            return;
+        }
+
+        if (!devices[id]) {
+            idStatus.textContent = "Unknown asset ID: " + id + ". Check the NFC URL or device configuration.";
+            return;
+        }
+
+        idStatus.textContent = "Loaded asset ID from URL: " + id;
+        currentDevice = devices[id];
+        populateAssetInfo();
+    }
+
+    function populateAssetInfo() {
+        if (!currentDevice) return;
+        document.getElementById("assetId").textContent = currentDevice.assetId;
+        document.getElementById("deviceName").textContent = currentDevice.name;
+        document.getElementById("deviceModel").textContent = currentDevice.model;
+        document.getElementById("deviceLocation").textContent = currentDevice.location;
+        document.getElementById("assetCard").classList.remove("hidden");
+    }
+
+    function login() {
+        const u = document.getElementById('username').value.trim();
+        const p = document.getElementById('password').value.trim();
+        const error = document.getElementById('loginError');
+
+        error.textContent = "";
+
+        if (u === "user1" && p === "user123") {
+            currentRole = "tier1";
+        } else if (u === "admin1" && p === "admin123") {
+            currentRole = "tier2";
+        } else if (u === "superadmin" && p === "super123") {
+            currentRole = "tier3";
+        } else {
+            error.textContent = "Invalid username or password (demo).";
+            return;
+        }
+
+        if (!currentDevice) {
+            error.textContent = "No valid asset loaded. Check URL parameter ?id=...";
+            return;
+        }
+
+        document.getElementById('loginCard').classList.add('hidden');
+        showInterface();
+    }
+
+    function showInterface() {
+        const roleBadge = document.getElementById('roleBadge');
+        roleBadge.innerHTML = "";
+
+        document.getElementById('tier1Card').classList.add('hidden');
+        document.getElementById('tier2Card').classList.add('hidden');
+        document.getElementById('tier3Card').classList.add('hidden');
+
+        if (currentRole === "tier1") {
+            roleBadge.innerHTML = '<span class="badge badge-tier1">Logged in as Tier‑1 End User (user1)</span>';
+            document.getElementById('tier1Card').classList.remove('hidden');
+        } else if (currentRole === "tier2") {
+            roleBadge.innerHTML = '<span class="badge badge-tier2">Logged in as Tier‑2 Service Engineer (admin1)</span>';
+            populateTier2();
+            document.getElementById('tier2Card').classList.remove('hidden');
+        } else if (currentRole === "tier3") {
+            roleBadge.innerHTML = '<span class="badge badge-tier3">Logged in as Tier‑3 Super Admin (superadmin)</span>';
+            populateTier3();
+            document.getElementById('tier3Card').classList.remove('hidden');
+        }
+    }
+
+    function populateTier2() {
+        document.getElementById("techIp").textContent = currentDevice.ip;
+        document.getElementById("techSerial").textContent = currentDevice.serial;
+        document.getElementById("techInstallDate").textContent = currentDevice.installDate;
+        document.getElementById("lastIssueType").textContent = lastIssue.type;
+        document.getElementById("lastIssueComments").textContent = lastIssue.comments;
+        if (lastLocation) {
+            document.getElementById("engineerLocationBox").textContent =
+                lastLocation.lat.toFixed(6) + ", " + lastLocation.lon.toFixed(6) +
+                " (±" + Math.round(lastLocation.acc) + " m)";
+        } else {
+            document.getElementById("engineerLocationBox").textContent = "No location captured yet.";
+        }
+        renderServiceHistoryTables();
+    }
+
+    function populateTier3() {
+        document.getElementById("adminIp").textContent = currentDevice.ip;
+        document.getElementById("adminSerial").textContent = currentDevice.serial;
+        document.getElementById("adminInstallDate").textContent = currentDevice.installDate;
+        document.getElementById("adminProcurement").textContent = currentDevice.procurementDate;
+        document.getElementById("adminWarranty").textContent = currentDevice.warranty;
+        document.getElementById("adminVendor").textContent = currentDevice.vendor;
+        document.getElementById("adminAmc").textContent = currentDevice.amc;
+        document.getElementById("adminUser").textContent = currentDevice.credUser;
+        document.getElementById("adminPass").textContent = currentDevice.credPass;
+        renderServiceHistoryTables();
+    }
+
+    function renderServiceHistoryTables() {
+        const body2 = document.getElementById("serviceTableBody");
+        const body3 = document.getElementById("serviceTableBodyAdmin");
+        body2.innerHTML = "";
+        body3.innerHTML = "";
+
+        currentDevice.serviceHistory.forEach(entry => {
+            const row2 = body2.insertRow();
+            row2.insertCell(0).textContent = entry.date;
+            row2.insertCell(1).textContent = entry.engineer;
+            row2.insertCell(2).textContent = entry.status;
+            row2.insertCell(3).textContent = entry.notes;
+            row2.insertCell(4).textContent = entry.parts;
+
+            const row3 = body3.insertRow();
+            row3.insertCell(0).textContent = entry.date;
+            row3.insertCell(1).textContent = entry.engineer;
+            row3.insertCell(2).textContent = entry.status;
+            row3.insertCell(3).textContent = entry.notes;
+            row3.insertCell(4).textContent = entry.parts;
+        });
+    }
+
+    function captureLocation() {
+        const box = document.getElementById("locationBox");
+        box.innerHTML = "Requesting GPS location...";
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                lastLocation = {
+                    lat: position.coords.latitude,
+                    lon: position.coords.longitude,
+                    acc: position.coords.accuracy
+                };
+                box.innerHTML =
+                    "<p><strong>Latitude:</strong> " + lastLocation.lat.toFixed(6) +
+                    "<br><strong>Longitude:</strong> " + lastLocation.lon.toFixed(6) +
+                    "<br><strong>Accuracy:</strong> " + Math.round(lastLocation.acc) + " meters</p>" +
+                    "<div class='map-box'>Map Preview (Demo)</div>";
+                if (currentRole === "tier2" || currentRole === "tier3") {
+                    document.getElementById("engineerLocationBox").textContent =
+                        lastLocation.lat.toFixed(6) + ", " + lastLocation.lon.toFixed(6) +
+                        " (±" + Math.round(lastLocation.acc) + " m)";
+                }
+            }, function() {
+                box.innerHTML = "Unable to retrieve location (permission denied or error).";
+            });
+        } else {
+            box.innerHTML = "GPS not supported on this device.";
+        }
+    }
+
+    function submitIssue() {
+        const type = document.getElementById('issueType').value;
+        const comments = document.getElementById('issueComments').value.trim();
+        const msg = document.getElementById('submitMessage');
+
+        lastIssue.type = type;
+        lastIssue.comments = comments || "No additional comments.";
+
+        msg.textContent = "Issue submitted (demo only – no backend). This data is now visible to Tier‑2 and Tier‑3 views.";
+        setTimeout(() => { msg.textContent = ""; }, 5000);
+    }
+
+    function addServiceHistory() {
+        const status = document.getElementById('ticketStatus').value;
+        const notes = document.getElementById('engineerNotes').value.trim();
+        const parts = document.getElementById('partsUsed').value.trim();
+        const msg = document.getElementById('serviceMessage');
+
+        const today = new Date();
+        const dateStr = today.toLocaleDateString('en-GB');
+
+        currentDevice.serviceHistory.unshift({
+            date: dateStr,
+            engineer: "Eng. (Demo)",
+            status: status,
+            notes: notes || "No notes provided.",
+            parts: parts || "–"
+        });
+
+        renderServiceHistoryTables();
+
+        msg.textContent = "Service history updated (demo only).";
+        setTimeout(() => { msg.textContent = ""; }, 5000);
+    }
+
+    window.onload = init;
+</script>
+
+</body>
+</html>
